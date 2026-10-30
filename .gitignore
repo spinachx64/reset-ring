@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+build-firmware/
+backups/
+.state/
+.DS_Store

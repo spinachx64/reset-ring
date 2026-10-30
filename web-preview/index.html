@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#111412">
+<title>Reset Ring — 三种表盘方案</title>
+<meta name="description" content="三种低亮度 StopWatch 表盘的交互设计预览。">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar"><a class="wordmark" href="#"><span class="brand-ring"></span>RESET RING</a><span class="eyebrow top-note">STOPWATCH · DESIGN EXPLORATION</span><span class="local-badge"><i></i>设计预览</span></header>
+<main>
+<section class="intro"><div><p class="eyebrow">A QUIETER WAY TO COUNT DOWN</p><h1>让时间，<span>安静一点。</span></h1><p class="lede">拿掉毫秒，收敛亮度。用比例、留白和细节，重新整理这块小小的屏幕。</p></div><div class="intro-note"><span>03</span><p>同一组信息<br>三种表达方式</p></div></section>
+<section class="toolbar" aria-label="预览设置">
+<div class="control mode-control"><span class="control-label">限额窗口</span><div class="segmented" aria-label="限额窗口"><button class="active" data-mode="h" aria-pressed="true">5H</button><button data-mode="w" aria-pressed="false">Weekly</button></div></div>
+<label class="control slider-control"><span class="control-label">剩余额度 <output id="quotaValue">75%</output></span><input id="quota" type="range" min="0" max="100" value="75" aria-label="剩余额度"></label>
+<label class="control slider-control"><span class="control-label">预览亮度 <output id="brightnessValue">75%</output></span><input id="brightness" type="range" min="30" max="100" value="75" aria-label="预览亮度"></label>
+<div class="toolbar-actions"><button id="rotate" class="quiet-button" title="仅旋转中央内容，进度环保持固定"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10a8 8 0 1 0-2 8M20 4v6h-6"/></svg><span>旋转 0°</span></button><button id="pause" class="quiet-button" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5v14M15 5v14"/></svg><span>暂停</span></button></div>
+</section>
+<section class="studies" aria-label="三种设计方案">
+<article class="study" data-style="minimal">
+<div class="study-top"><span class="index">01 /</span><span class="style-label">MINIMAL</span><span class="recommendation">推荐</span></div>
+<button class="dial-stage" data-enlarge="minimal" aria-label="放大方案一，精致极简">
+<div class="watch-bezel"><div class="face face-minimal"><svg class="ring" viewBox="0 0 466 466" aria-hidden="true"><circle class="track" cx="233" cy="233" r="206"/><circle class="progress" cx="233" cy="233" r="206" pathLength="100"/></svg><div class="content"><div class="countdown">03:37:45</div><div class="divider"></div><div class="percentage">75<span>%</span></div></div></div></div><span class="enlarge-hint">↗ 放大预览</span>
+</button>
+<div class="study-copy"><h2>精致极简<span>少一点，刚刚好。</span></h2><p>细环收住边界，主时间成为唯一焦点。小一号的百分比，留出呼吸感。</p><div class="tags"><span>细环</span><span>雾灰数字</span><span>充足留白</span></div></div>
+<button class="choose" data-choose="minimal">选择这版 <span>↗</span></button>
+</article>
+<article class="study" data-style="instrument">
+<div class="study-top"><span class="index">02 /</span><span class="style-label">INSTRUMENT</span></div>
+<button class="dial-stage" data-enlarge="instrument" aria-label="放大方案二，精密仪表">
+<div class="watch-bezel"><div class="face face-instrument"><svg class="ring" viewBox="0 0 466 466" aria-hidden="true"><circle class="track" cx="233" cy="233" r="206"/><circle class="progress" cx="233" cy="233" r="206" pathLength="100"/><g class="ticks"></g></svg><div class="content"><div class="percentage">75<span>%</span></div><div class="countdown">03:37:45</div><div class="mode-dots"><i class="selected"></i><i></i></div></div></div></div><span class="enlarge-hint">↗ 放大预览</span>
+</button>
+<div class="study-copy"><h2>精密仪表<span>多一点秩序感。</span></h2><p>低亮刻度提供层次，信息清楚分区。更像一块克制的实体仪表。</p><div class="tags"><span>低亮刻度</span><span>等宽排版</span><span>模式状态点</span></div></div>
+<button class="choose" data-choose="instrument">选择这版 <span>↗</span></button>
+</article>
+<article class="study" data-style="soft">
+<div class="study-top"><span class="index">03 /</span><span class="style-label">SOFT DEPTH</span></div>
+<button class="dial-stage" data-enlarge="soft" aria-label="放大方案三，柔和层次">
+<div class="watch-bezel"><div class="face face-soft"><div class="soft-light"></div><svg class="ring" viewBox="0 0 466 466" aria-hidden="true"><circle class="track" cx="233" cy="233" r="206"/><circle class="progress" cx="233" cy="233" r="206" pathLength="100"/></svg><div class="content"><div class="percentage">75<span>%</span></div><div class="countdown">03:37:45</div><div class="soft-mark"></div></div></div></div><span class="enlarge-hint">↗ 放大预览</span>
+</button>
+<div class="study-copy"><h2>柔和层次<span>给黑色一点温度。</span></h2><p>深色底盘与很轻的晕光，托起时间和余量。柔和，但不失清晰。</p><div class="tags"><span>深色底盘</span><span>轻微晕光</span><span>柔和色阶</span></div></div>
+<button class="choose" data-choose="soft">选择这版 <span>↗</span></button>
+</article>
+</section>
+<section class="selection" aria-live="polite"><div><span class="selection-kicker">YOUR PICK</span><p id="selectionText">先看看，喜欢哪一版再决定。</p></div><span id="selectionDetail">点按表盘可放大，选择不会改动手表。</span></section>
+<footer><p><span class="footer-dot"></span> 共用设定：去掉毫秒 · 降低饱和度 · 连续单段余量环</p><p>模拟数据，不读取账号。屏幕实际亮度以真机为准。</p></footer>
+</main>
+<dialog id="detail"><div class="dialog-header"><div><span class="eyebrow" id="detailIndex">01 / MINIMAL</span><h2 id="detailTitle">精致极简</h2></div><button id="closeDetail" class="close" aria-label="关闭放大预览">×</button></div><div id="largeDial"></div><p class="dialog-note">表盘逻辑尺寸 466 × 466 · 点击左右箭头切换方案</p><div class="dialog-actions"><button id="prevDesign" class="quiet-button">← 上一个</button><button id="detailChoose" class="primary-button">选择这版</button><button id="nextDesign" class="quiet-button">下一个 →</button></div></dialog>
+<script src="app.js"></script>
+</body></html>
