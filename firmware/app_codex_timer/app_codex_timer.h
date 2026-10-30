@@ -21,5 +21,6 @@ private:
     quota::WatchFace face;
     int64_t lastDraw=0,lastImu=0,lastRefresh=-5000000;
     bool wasConnected=false;
+    int64_t orientationLogUntil=0,lastOrientationLog=0;
     void refresh(int64_t now);
 };

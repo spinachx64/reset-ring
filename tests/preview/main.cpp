@@ -1,9 +1,11 @@
 #include "../../firmware/app_codex_timer/view/watch_face.h"
 #include <lvgl.h>
 #include <cstdio>
+#include <cassert>
 #include <vector>
 #include <string>
-void flush(lv_display_t* display,const lv_area_t*,uint8_t*) { lv_display_flush_ready(display); }
+unsigned flushes=0;
+void flush(lv_display_t* display,const lv_area_t*,uint8_t*) { ++flushes; lv_display_flush_ready(display); }
 void save(const char* name) {
     lv_obj_update_layout(lv_screen_active());
     auto image=lv_snapshot_take(lv_screen_active(),LV_COLOR_FORMAT_RGB888);
@@ -64,6 +66,19 @@ int main(int argc,char** argv) {
         char path[80]; std::snprintf(path,sizeof(path),".state/rotation-%d.ppm",angle);
         save(path);
     }
+    win.clock.valid=false;
+    face.retarget(win,0,false,false,start+20000000);
+    face.orient(0,start+20000000);
+    face.update(win,0,start+21000000);
+    face.update(win,0,start+21250000);
+    for(int i=0;i<4;++i) { lv_tick_inc(40); lv_timer_handler(); }
+    flushes=0;
+    for(int i=0;i<8;++i) {
+        face.update(win,0,start+21250000);
+        lv_tick_inc(40); lv_timer_handler();
+    }
+    std::fprintf(stderr,"Idle redraw flushes: %u\n",flushes);
+    assert(flushes==0); // A stationary unchanged face must not redraw on every poll.
     face.destroy();
     return 0;
 }

@@ -1,4 +1,5 @@
 #include "watch_face.h"
+#include <src/misc/cache/instance/lv_image_cache.h>
 #include "../controller/orientation.h"
 #include <cmath>
 #include <cstdio>
@@ -24,6 +25,19 @@ lv_obj_t* label(lv_obj_t* parent, const lv_font_t* font) {
     lv_obj_set_style_text_align(obj,LV_TEXT_ALIGN_CENTER,0);
     return obj;
 }
+// LVGL style setters invalidate even when the value is unchanged.
+void textColor(lv_obj_t* obj,lv_color_t color) {
+    if (!lv_color_eq(lv_obj_get_style_text_color(obj,LV_PART_MAIN),color)) lv_obj_set_style_text_color(obj,color,0);
+}
+void backgroundColor(lv_obj_t* obj,lv_color_t color) {
+    if (!lv_color_eq(lv_obj_get_style_bg_color(obj,LV_PART_MAIN),color)) lv_obj_set_style_bg_color(obj,color,0);
+}
+void opacity(lv_obj_t* obj,int value) {
+    if (lv_obj_get_style_opa(obj,LV_PART_MAIN)!=value) lv_obj_set_style_opa(obj,value,0);
+}
+void fontStyle(lv_obj_t* obj,const lv_font_t* font) {
+    if (lv_obj_get_style_text_font(obj,LV_PART_MAIN)!=font) lv_obj_set_style_text_font(obj,font,0);
+}
 uint32_t mix(uint32_t a, uint32_t b, float f) {
     f=std::max(0.f,std::min(1.f,f));
     uint32_t out=0;
@@ -39,6 +53,7 @@ void WatchFace::create() {
     lv_obj_center(root);
     lv_obj_set_style_bg_opa(root,LV_OPA_COVER,0);
     lv_obj_set_style_bg_color(root,lv_color_hex(0x070A08),0);
+    buildBackdrop(width,height);
     lv_obj_add_event_cb(root,drawBackdrop,LV_EVENT_DRAW_MAIN,this);
     ring=lv_obj_create(root); clean(ring);
     lv_obj_set_size(ring,width,height); lv_obj_center(ring);
@@ -69,6 +84,12 @@ void WatchFace::create() {
 void WatchFace::destroy() {
     if (root) lv_obj_delete(root);
     root=ring=content=percentage=percentageSign=percentageLayer=softMark=nullptr;
+    for (int i=0;i<2;++i) {
+        lv_image_cache_drop(&backdropImages[i]);
+        if (backdropBuffers[i]) lv_draw_buf_destroy(backdropBuffers[i]);
+        backdropBuffers[i]=nullptr;
+        backdropImages[i]={};
+    }
     shown.clear();
 }
 void WatchFace::retarget(const Window& win,int nextMode,bool reset,bool switched,int64_t now) {
@@ -83,7 +104,7 @@ void WatchFace::orient(int degrees,int64_t now) {
     if (degrees==angle) return;
     float current=rotation.value(now);
     float delta=shortestRotationDelta(degrees,current);
-    rotation.target(current+delta,now,120000);
+    rotation.target(current+delta,now,260000);
     angle=degrees;
 }
 void WatchFace::update(const Window& win,int currentMode,int64_t now) {
@@ -114,9 +135,10 @@ void WatchFace::update(const Window& win,int currentMode,int64_t now) {
     else std::snprintf(pct,sizeof(pct),"--");
     if (strcmp(lv_label_get_text(percentage),pct)) lv_label_set_text(percentage,pct);
     auto accent=lv_color_hex(color);
-    lv_obj_set_style_text_color(percentage,accent,0);
-    lv_obj_set_style_text_color(percentageSign,accent,0);
-    lv_obj_set_style_bg_color(softMark,accent,0);
+    auto pctColor=resetElapsed>=200000 && resetElapsed<320000 ? lv_color_hex(0xA3AA9F) : accent;
+    textColor(percentage,pctColor);
+    textColor(percentageSign,accent);
+    backgroundColor(softMark,accent);
     // The smaller percent sign shares the number's baseline.
     int numberWidth=int(strlen(pct))*41;
     int pctLeft=(380-numberWidth-30)/2;
@@ -126,7 +148,7 @@ void WatchFace::update(const Window& win,int currentMode,int64_t now) {
     const auto refreshElapsed = now-refreshAt;
     const float pulse = refreshElapsed >= 0 && refreshElapsed < 400000 ?
         std::sin(float(refreshElapsed)/400000*3.14159265f) : 0.f;
-    lv_obj_set_style_opa(percentageLayer,int(255-150*pulse),0);
+    opacity(percentageLayer,int(255-150*pulse));
     int64_t remaining=win.clock.remaining(now);
     if (resetElapsed>=0 && resetElapsed<500000) remaining=0;
     int64_t seconds=remaining/1000;
@@ -147,7 +169,7 @@ void WatchFace::update(const Window& win,int currentMode,int64_t now) {
     for (int i=0;i<11;++i) {
         if (i>=count) { lv_obj_add_flag(digits[i],LV_OBJ_FLAG_HIDDEN); lv_obj_add_flag(oldDigits[i],LV_OBJ_FLAG_HIDDEN); continue; }
         lv_obj_remove_flag(digits[i],LV_OBJ_FLAG_HIDDEN);
-        lv_obj_set_style_text_font(digits[i],font,0); lv_obj_set_style_text_font(oldDigits[i],font,0);
+        fontStyle(digits[i],font); fontStyle(oldDigits[i],font);
         lv_obj_set_size(digits[i],cell,90); lv_obj_set_size(oldDigits[i],cell,90);
         char next[2]={timeText[i],0};
         if (i>=int(shown.size()) || shown[i]!=timeText[i]) {
@@ -159,11 +181,11 @@ void WatchFace::update(const Window& win,int currentMode,int64_t now) {
         float t=std::min(1.f,float(now-digitAt[i])/160000);
         int y=(mode?211:204);
         lv_obj_set_pos(digits[i],left+cell*i,y+int(9*(1-t)));
-        lv_obj_set_style_opa(digits[i],int(255*t),0);
+        opacity(digits[i],int(255*t));
         if (t<1) {
             lv_obj_remove_flag(oldDigits[i],LV_OBJ_FLAG_HIDDEN);
             lv_obj_set_pos(oldDigits[i],left+cell*i,y-int(9*t));
-            lv_obj_set_style_opa(oldDigits[i],int(255*(1-t)),0);
+            opacity(oldDigits[i],int(255*(1-t)));
         } else lv_obj_add_flag(oldDigits[i],LV_OBJ_FLAG_HIDDEN);
     }
     shown=timeText;
@@ -175,31 +197,49 @@ void WatchFace::update(const Window& win,int currentMode,int64_t now) {
         opacity=std::abs(2*t-1);
         slide=int(7*std::sin(t*3.14159265f));
     }
-    // A subtle 120ms flash only after a confirmed new API reset timestamp.
-    if (resetElapsed>=200000 && resetElapsed<320000)
-        lv_obj_set_style_text_color(percentage,lv_color_hex(0xA3AA9F),0);
-    lv_obj_set_style_opa(content,int(255*opacity),0);
-    lv_obj_align(content,LV_ALIGN_CENTER,0,slide);
+    if (lv_obj_get_style_opa(content,LV_PART_MAIN)!=int(255*opacity))
+        lv_obj_set_style_opa(content,int(255*opacity),0);
+    lv_obj_set_pos(content,0,slide); // Already center-aligned at construction.
     int rotate=int(std::round(rotation.value(now)*10));
-    lv_obj_set_style_transform_rotation(content,rotate,0);
+    if (lv_obj_get_style_transform_rotation(content,LV_PART_MAIN)!=rotate)
+        lv_obj_set_style_transform_rotation(content,rotate,0);
+}
+void WatchFace::buildBackdrop(int width,int height) {
+    for (int i=0;i<2;++i) {
+        backdropBuffers[i]=lv_draw_buf_create(width,height,LV_COLOR_FORMAT_RGB565,LV_STRIDE_AUTO);
+        if (!backdropBuffers[i]) continue;
+        uint32_t base=i?0x0B0907:0x070A08, center=i?0x1A1610:0x0F1813;
+        for(int y=0;y<height;++y) {
+            auto row=reinterpret_cast<uint16_t*>(backdropBuffers[i]->data+y*backdropBuffers[i]->header.stride);
+            for(int x=0;x<width;++x) {
+                float radius=std::hypot(float(x-width/2),float(y-height/2+85));
+                float fade=1.f-std::min(340.f,std::max(0.f,radius))/340.f;
+                uint32_t rgb=mix(base,center,fade*fade);
+                // Static ordered dithering preserves subtle dark gradients in RGB565.
+                static constexpr unsigned bayer[16]={0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5};
+                unsigned bias=(2*bayer[(y&3)*4+(x&3)]+1)*255;
+                unsigned r=(((rgb>>16)&255)*31*32+bias)/(255*32);
+                unsigned g=(((rgb>>8)&255)*63*32+bias)/(255*32);
+                unsigned b=((rgb&255)*31*32+bias)/(255*32);
+                row[x]=uint16_t(r<<11 | g<<5 | b);
+            }
+        }
+        lv_draw_buf_to_image(backdropBuffers[i],&backdropImages[i]);
+    }
 }
 void WatchFace::drawBackdrop(lv_event_t* event) {
     auto self=static_cast<WatchFace*>(lv_event_get_user_data(event));
     auto layer=lv_event_get_layer(event);
     lv_area_t area; lv_obj_get_coords(self->root,&area);
-    int x=(area.x1+area.x2)/2, y=(area.y1+area.y2)/2-85;
-    float blend=self->colorBlend;
-    uint32_t base=mix(0x070A08,0x0B0907,blend);
-    uint32_t center=mix(0x0F1813,0x1A1610,blend);
-    lv_draw_rect_dsc_t rect; lv_draw_rect_dsc_init(&rect);
-    rect.radius=LV_RADIUS_CIRCLE;
-    // Concentric low-contrast fills approximate the web radial backdrop without
-    // a full-frame bitmap or enabling LVGL's complex-gradient renderer.
-    for (int radius=340;radius>=10;radius-=10) {
-        float falloff=1.f-float(radius)/340;
-        rect.bg_color=lv_color_hex(mix(base,center,falloff*falloff));
-        lv_area_t bounds={x-radius,y-radius,x+radius,y+radius};
-        lv_draw_rect(layer,&rect,&bounds);
+    lv_draw_image_dsc_t image; lv_draw_image_dsc_init(&image);
+    if (self->backdropBuffers[0]) {
+        image.src=&self->backdropImages[0];
+        lv_draw_image(layer,&image,&area);
+    }
+    if (self->backdropBuffers[1] && self->colorBlend>0) {
+        image.src=&self->backdropImages[1];
+        image.opa=int(255*self->colorBlend);
+        lv_draw_image(layer,&image,&area);
     }
 }
 void WatchFace::drawRing(lv_event_t* event) {

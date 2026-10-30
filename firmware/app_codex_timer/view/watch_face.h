@@ -15,6 +15,9 @@ public:
 private:
     lv_obj_t *root=nullptr, *ring=nullptr, *content=nullptr, *percentage=nullptr, *percentageSign=nullptr, *percentageLayer=nullptr, *softMark=nullptr;
     lv_obj_t *digits[11]{}, *oldDigits[11]{};
+    lv_draw_buf_t* backdropBuffers[2]{};
+    lv_image_dsc_t backdropImages[2]{};
+    void buildBackdrop(int width,int height);
     std::string shown;
     Tween progress, colorMix, rotation;
     int mode=0, angle=0;

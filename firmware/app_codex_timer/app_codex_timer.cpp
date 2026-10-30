@@ -17,6 +17,8 @@ void QuotaWatchApp::onCreate() {
 }
 void QuotaWatchApp::onOpen() {
     keys=std::make_unique<input::KeyManager>();
+    orientationLogUntil=esp_timer_get_time()+30000000;
+    lastOrientationLog=0;
     LvglLockGuard lock;
     face.create();
     face.retarget(store.windows[modes.mode()],modes.mode(),false,false,esp_timer_get_time());
@@ -58,8 +60,15 @@ void QuotaWatchApp::onRunning() {
     if (win.status(now)==quota::Status::ResetPending) refresh(now);
     int direction=orientation.angle();
     if (now-lastImu>=25000) {
+        const auto sampleGap=now-lastImu;
         lastImu=now; GetHAL().updateImuData(); auto data=GetHAL().getImuData();
         direction=orientation.update(data.accelX,data.accelY,data.accelZ,now);
+        if (now<orientationLogUntil && now-lastOrientationLog>=1000000) {
+            lastOrientationLog=now;
+            mclog::tagInfo("orientation", "x={:.3f} y={:.3f} z={:.3f} gap={}ms out={} state={} stable={}ms",
+                data.accelX,data.accelY,data.accelZ,sampleGap/1000,direction,
+                orientation.holdReason(),orientation.settledForUs(now)/1000);
+        }
     }
     if (now-lastDraw>=25000 || changed || switched) {
         lastDraw=now;
