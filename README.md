@@ -2,22 +2,20 @@
 
 把 Codex 的**剩余额度和重置倒计时**放到 M5Stack StopWatch 上，随手一看就知道还剩多少、什么时候重置，无需反复打开电脑查询。
 
-电脑上的 Python Bridge 读取当前登录账号的限额，通过蓝牙发送给手表；手表自行计时和显示。**账号凭据留在电脑上，不会发送到手表。**
+电脑上的 Python Bridge 读取当前登录账号的限额，通过蓝牙发送给手表；
 
 <p align="center"><img src="docs/selected-watchface.png" width="360" alt="柔和层次表盘：上方剩余额度百分比，下方重置倒计时，外围连续余量环"></p>
 
-> 图为生产 LVGL 代码渲染的模拟数据。当前固件采用「柔和层次」设计，已经移除毫秒行。
+> 图为生产 LVGL 代码渲染的模拟数据。
 
 ## 项目解决了什么
 
 - **额度一眼可见**：在 5H 与 Weekly 两个限额窗口之间切换，一次只展示一个窗口。
-- **区分额度和时间**：圆环显示剩余额度，中央时间显示距离重置还有多久；时间流逝不会使额度环自行缩短。
+- **区分额度和时间**：圆环显示剩余额度，中央时间显示距离重置还有多久。
 - **减少查表操作**：默认每 5 分钟自动同步，也可通过手表按键请求刷新。
 - **断线继续计时**：蓝牙断开后保留最后的时间锚点，本地倒计时继续运行，重连后重新同步。
 - **适合不同摆放角度**：中央文字支持任意角度转正，姿态稳定后再平滑调整，外围圆环固定；接近平放时保持最近方向。
 - **不把未知当满额**：缺失数据不会显示成 100%，倒计时到零也必须等待服务端确认新周期。
-
-表盘采用低亮度灰绿 / 暗金配色、细环、柔和底色和秒级倒计时。百分比在上，时间在下，不显示品牌标题或毫秒。
 
 ## 支持的设备与系统
 
@@ -110,15 +108,6 @@ launchctl bootout gui/$(id -u)/com.spinach.codex-stopwatch
 
 项目目录、虚拟环境或 Codex CLI 路径改变后，需要重新运行安装脚本。建议把项目放在 Mac 本地磁盘；放在外置磁盘时，登录后该磁盘必须已挂载。锁屏可继续运行，系统睡眠期间同步会暂停，唤醒后自动重连。
 
-## 更换电脑
-
-1. 在旧 Mac 上停止 Bridge，避免它先连接手表。
-2. 在新 Mac 上克隆项目，重新创建 `.venv` 并安装依赖，不复制旧电脑的虚拟环境。
-3. 在新 Mac 的 Codex CLI 中登录需要查看额度的账号。
-4. 按「快速开始」验证读取并启动，正常后设置自启动。
-
-**手表不需要重新刷机。** 切换电脑后，显示的是新电脑登录账号的额度。
-
 ## 配置与数据行为
 
 | 参数 | 用途 |
@@ -142,7 +131,7 @@ launchctl bootout gui/$(id -u)/com.spinach.codex-stopwatch
 
 ## 首次刷机与固件开发
 
-已刷好设备的日常用户可以跳过本节。本项目基于原厂 UserDemo 增加应用，**会替换当前固件，不是向小智固件直接安装一个插件**。刷机前备份整片 Flash，并保管好自己的恢复镜像。
+本项目基于原厂 UserDemo 增加应用，**会替换当前固件**。刷机前备份整片 Flash，并保管好自己的恢复镜像。
 
 已验证的构建环境为 PlatformIO 55.03.312 / ESP-IDF **5.5.5**、LVGL 9.5.0、Mooncake 2.3.3。原始 spec 建议 5.5.4，实际验证使用 5.5.5。需要 Git、Python、PlatformIO 和支持数据传输的 USB 连接。
 
@@ -156,7 +145,7 @@ bash scripts/build.sh -t upload --upload-port /dev/cu.usbmodemXXXX
 
 集成脚本把原厂工程准备在 git 忽略的 `build-firmware/`，复制应用并注册启动入口，保留原厂主页和其他应用。也可以运行 `bash scripts/install_firmware.sh` 后，在已配置的 ESP-IDF 环境中执行 `idf.py build`。
 
-原厂基线固定为 `83de653c0be4e51e82079bee2386b90fb0538a25`；cc-island 参考固定为 `f749756be8bfcaad65f5dbc7dc592f498db145e8`。组件版本记录在 [firmware/component-revisions.json](firmware/component-revisions.json)。首次构建需要联网下载依赖。
+原厂基线固定为 `83de653c0be4e51e82079bee2386b90fb0538a25`；组件版本记录在 [firmware/component-revisions.json](firmware/component-revisions.json)。首次构建需要联网下载依赖。
 
 恢复自己的完整 16MiB 镜像：
 
@@ -165,50 +154,6 @@ bash scripts/build.sh -t upload --upload-port /dev/cu.usbmodemXXXX
 ESPTOOL_PYTHON=python3 bash scripts/restore_firmware.sh \
   /dev/cu.usbmodemXXXX /absolute/path/to/your-backup.bin
 ```
-
-`backups/` 不进入 Git，仓库不包含设备恢复镜像；不要假设克隆项目就能恢复刷机前的系统。
-
-## 设计预览与验证
-
-无需连接手表即可对比三种 Web 设计：
-
-```bash
-python3 -m http.server 8765 --bind 127.0.0.1 --directory web-preview
-# 浏览器打开 http://127.0.0.1:8765
-```
-
-预览使用模拟数据，支持窗口切换、额度 / 亮度调节、旋转、暂停和放大。点击「选择这版」只会保存浏览器本地偏好，不会修改设备。当前固件采用第 3 版「柔和层次」。
-
-```bash
-# Python 数据、缓存、协议与单次探测测试
-python3 -m unittest discover -s tests -v
-
-# 包含 C++ 时钟、解析与姿态检查；需要 C/C++ 编译器及 cJSON 源码
-CJSON_DIR=/path/to/cJSON bash scripts/test.sh
-# 已配置 ESP-IDF 时，也可通过 IDF_PATH 自动定位 cJSON
-
-# 生产 LVGL 代码的桌面快照；需要已准备的 build-firmware、CMake 和 Ninja
-bash scripts/preview.sh
-```
-
-真机已验证刷机、真实额度同步、蓝牙重连，以及重复包 / 错误版本 / 超长包后的恢复。自动检查覆盖未知数据、权威周期推进、单调计时、任意角度、平放锁定及多圈最短旋转。完整续航和真实服务端跨周期体验尚未完成长期验收。
-
-## 项目结构与进一步说明
-
-```text
-bridge/                       Mac 数据采集、缓存与 BLE 传输
-firmware/app_codex_timer/      Mooncake 应用、计时、姿态与 LVGL 表盘
-scripts/                      构建、自启动、恢复、测试和预览脚本
-tests/                        Python / C++ 回归检查及 LVGL 快照
-web-preview/                  三种表盘方案的本地交互预览
-docs/                         设计参数、验证记录与第三方许可
-```
-
-- [当前表盘设计](docs/DESIGN.md)
-- [验证记录与待验证项](docs/VALIDATION.md)
-- [原始规格](Codex_StopWatch_Spec_v1.0.md)：保留早期设计；其中毫秒行和四向吸附已由后续设计替代。
-
-BLE v1 面向本地可信环境，使用未配对的 Nordic UART Service。广播名称用于发现，不构成身份认证；数据包只包含限额及时间。WHAM 是内部兼容接口，可能变化。
 
 ## 参考与许可
 
