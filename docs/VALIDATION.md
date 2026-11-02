@@ -2,6 +2,15 @@
 
 日期：2026-10-30。验证结果随真机联调更新。
 
+## 2026-11-02 OLED 保护
+
+- 生产 LVGL 桌面回归覆盖 25 分钟位移循环、±4px 边界、圆环不裁切、10 分钟降亮以及按键/转向恢复；静止轮询仍为零次显示刷新。
+- Bridge 的 9 项 Python 测试与 C++ 时钟、协议、姿态检查通过。
+- ESP32-S3 固件编译通过，日志位于本地 `.state/build-oled.log`。
+- 随后通过 `/dev/cu.usbmodem21201` 刷入新增保护固件，写入哈希校验成功并自动重启；串口确认表盘运行、IMU 采样间隔约 25–26ms。真实降亮观感、降亮状态下 PSRAM 余量及长期使用效果仍待实机验证。
+
+## 2026-10-30 基础功能与真机联调
+
 - 设备：ESP32-S3 rev 0.2，16MB Flash、8MB PSRAM；USB Serial/JTAG `/dev/cu.usbmodem21201`。
 - 原固件整片读取完成：16777216 bytes；SHA256 `a1315d5f720feec7b00f08e5c35c5edfa9b2921e58f44ef424cd712c65c32a6c`。备份路径 `backups/stopwatch-original-20261030.bin`，不进入 git。
 - 参考 cc-island：`f749756be8bfcaad65f5dbc7dc592f498db145e8`；原厂：`83de653c0be4e51e82079bee2386b90fb0538a25`。

@@ -79,6 +79,44 @@ int main(int argc,char** argv) {
     }
     std::fprintf(stderr,"Idle redraw flushes: %u\n",flushes);
     assert(flushes==0); // A stationary unchanged face must not redraw on every poll.
+    auto root=lv_obj_get_child(lv_screen_active(),0);
+    auto foreground=lv_obj_get_child(root,0);
+    auto ring=lv_obj_get_child(foreground,0);
+    auto content=lv_obj_get_child(foreground,1);
+    int firstX=0, firstY=0;
+    bool moved=false;
+    for(int minute=0;minute<=25;++minute) {
+        face.update(win,0,start+650000+int64_t(minute)*60000000);
+        lv_obj_update_layout(root);
+        int x=lv_obj_get_x(foreground), y=lv_obj_get_y(foreground);
+        assert(std::abs(x)<=4 && std::abs(y)<=4);
+        if (!minute) { firstX=x; firstY=y; }
+        else moved|=x!=firstX || y!=firstY;
+        // The ring stays inside the display and moves with the rotated text.
+        lv_area_t area; lv_obj_get_coords(ring,&area);
+        assert(area.x1+233-213>=0 && area.x1+233+213<466);
+        assert(area.y1+233-213>=0 && area.y1+233+213<466);
+        assert(lv_obj_get_parent(content)==foreground);
+    }
+    assert(moved);
+    assert(lv_obj_get_x(foreground)==firstX && lv_obj_get_y(foreground)==firstY);
+    assert(lv_obj_get_style_opa(foreground,LV_PART_MAIN)==178);
+    for(int i=0;i<4;++i) { lv_tick_inc(40); lv_timer_handler(); }
+    flushes=0;
+    for(int i=0;i<8;++i) {
+        face.update(win,0,start+650000+1500000000);
+        lv_tick_inc(40); lv_timer_handler();
+    }
+    assert(flushes==0); // Dimming must not introduce continuous redraws either.
+    face.refreshFeedback(start+650000+1500000000);
+    face.update(win,0,start+650000+1500000000);
+    assert(lv_obj_get_style_opa(foreground,LV_PART_MAIN)==255);
+    face.update(win,0,start+650000+2100000000);
+    assert(lv_obj_get_style_opa(foreground,LV_PART_MAIN)==178);
+    face.orient(47,start+650000+2100000000);
+    face.update(win,0,start+650000+2100300000);
+    assert(lv_obj_get_style_opa(foreground,LV_PART_MAIN)==255);
+    save(".state/oled-protection.ppm");
     face.destroy();
     return 0;
 }

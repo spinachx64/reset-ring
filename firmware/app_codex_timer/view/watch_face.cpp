@@ -55,12 +55,15 @@ void WatchFace::create() {
     lv_obj_set_style_bg_color(root,lv_color_hex(0x070A08),0);
     buildBackdrop(width,height);
     lv_obj_add_event_cb(root,drawBackdrop,LV_EVENT_DRAW_MAIN,this);
-    ring=lv_obj_create(root); clean(ring);
+    foreground=lv_obj_create(root); clean(foreground);
+    lv_obj_set_size(foreground,width,height);
+    lv_obj_set_pos(foreground,0,0);
+    ring=lv_obj_create(foreground); clean(ring);
     lv_obj_set_size(ring,width,height); lv_obj_center(ring);
     lv_obj_add_event_cb(ring,drawRing,LV_EVENT_DRAW_MAIN,this);
     // LVGL 9.5 renders a transformed object together with its children into a layer.
     // Central layer only; outer ring stays fixed. Approx 550 KiB ARGB at 380x360.
-    content=lv_obj_create(root); clean(content);
+    content=lv_obj_create(foreground); clean(content);
     lv_obj_set_size(content,380,360); lv_obj_center(content);
     lv_obj_set_style_transform_pivot_x(content,190,0);
     lv_obj_set_style_transform_pivot_y(content,180,0);
@@ -80,10 +83,11 @@ void WatchFace::create() {
         lv_label_set_text(digits[i],""); lv_label_set_text(oldDigits[i],"");
     }
     shown.clear();
+    protectionStartedAt=-1;
 }
 void WatchFace::destroy() {
     if (root) lv_obj_delete(root);
-    root=ring=content=percentage=percentageSign=percentageLayer=softMark=nullptr;
+    root=foreground=ring=content=percentage=percentageSign=percentageLayer=softMark=nullptr;
     for (int i=0;i<2;++i) {
         lv_image_cache_drop(&backdropImages[i]);
         if (backdropBuffers[i]) lv_draw_buf_destroy(backdropBuffers[i]);
@@ -95,13 +99,14 @@ void WatchFace::destroy() {
 void WatchFace::retarget(const Window& win,int nextMode,bool reset,bool switched,int64_t now) {
     mode=nextMode;
     colorMix.target(mode?1.f:0.f,now,switched?300000:550000);
-    if (switched) { switchAt=now; shown.clear(); }
+    if (switched) { switchAt=now; lastActivityAt=now; shown.clear(); }
     resetAt=reset?now:-2000000;
     resetTarget=win.hasUsage?win.remaining():0;
     progress.target(resetTarget,now,switched?300000:600000);
 }
 void WatchFace::orient(int degrees,int64_t now) {
     if (degrees==angle) return;
+    lastActivityAt=now;
     float current=rotation.value(now);
     float delta=shortestRotationDelta(degrees,current);
     rotation.target(current+delta,now,260000);
@@ -109,6 +114,15 @@ void WatchFace::orient(int degrees,int64_t now) {
 }
 void WatchFace::update(const Window& win,int currentMode,int64_t now) {
     if (!root) return;
+    if (protectionStartedAt<0) { protectionStartedAt=now; lastActivityAt=now; }
+    // Move all bright elements together, independently of content rotation.
+    // A serpentine 5x5 grid repeats every 25 minutes; start at its center.
+    int step=int(((now-protectionStartedAt)/60000000+12)%25);
+    int row=step/5, column=step%5;
+    int x=((row%2)?4-column:column)*2-4;
+    int y=row*2-4;
+    lv_obj_set_pos(foreground,x,y);
+    opacity(foreground,now-lastActivityAt>=600000000?178:255);
     mode=currentMode;
     dashed=win.source==Source::Estimated;
     dim=win.dim(now) || win.status(now)==Status::ResetPending;
